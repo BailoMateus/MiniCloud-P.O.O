@@ -166,26 +166,6 @@ Autores: [seus nomes e RA]
 Ano: 2025
 
 
----
-
-### E mais dois arquivos úteis pra deixar o projeto pronto:
-
-#### `.gitignore`
-
-```gitignore
-# Compilação Java
-*.class
-*.jar
-
-# Configurações locais
-src/main/resources/config.properties
-
-# IDEs
-/.idea/
-/target/
-/out/
-/.venv/
-/.vscode/
 
 
 
