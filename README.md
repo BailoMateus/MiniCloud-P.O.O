@@ -1,147 +1,195 @@
-Projeto Final de Programação Orientada a Objetos – MiniCloud
-1. Ideia Geral do Projeto
-O projeto MiniCloud tem como objetivo desenvolver um simulador de provedor de serviços em nuvem, inspirado em plataformas reais como Amazon Web Services (AWS), Google Cloud e Microsoft Azure, aplicando os princípios fundamentais da Programação Orientada a Objetos (POO) em um sistema modular, escalável e persistente.
-O sistema permite que o usuário crie uma conta, selecione um plano de serviço e gerencie seus próprios recursos de nuvem simulados, como instâncias de computação, bancos de dados gerenciados e buckets de armazenamento.
- Cada recurso possui configurações e custos específicos, e o programa calcula o valor mensal de uso, simulando uma cobrança real de provedores de nuvem.
+# ☁️ MiniCloud – Simulador de Provedor de Nuvem
 
-2. Objetivos do Projeto
-Aplicar os conceitos centrais da Programação Orientada a Objetos: abstração, encapsulamento, herança e polimorfismo.
+Projeto desenvolvido como trabalho final da disciplina **Programação Orientada a Objetos (POO)**, com o objetivo de aplicar os conceitos de **encapsulamento, herança, polimorfismo, abstração** e **persistência de dados** por meio do **PostgreSQL**.
 
+---
 
-Construir um sistema composto por múltiplas classes inter-relacionadas e organizadas em camadas.
+## 📘 Sobre o projeto
 
+A **MiniCloud** simula um provedor de serviços em nuvem semelhante à AWS, permitindo que o usuário:
 
-Implementar tratamento de exceções personalizadas e persistência de dados com PostgreSQL.
+- Crie uma conta e selecione um plano de serviço (Free, Standard, Pro);  
+- Crie e gerencie recursos de nuvem:
+  - **Instâncias de Computação**
+  - **Bancos de Dados Gerenciados**
+  - **Buckets de Armazenamento**
+- Calcule o custo mensal de uso dos recursos criados.  
 
+O sistema possui interface gráfica (Swing/JavaFX), persistência de dados via **JDBC + PostgreSQL** e uma arquitetura modular em camadas (Domínio, DAO e GUI).
 
-Desenvolver uma interface gráfica (GUI) que permita interação intuitiva com as principais funcionalidades do sistema.
+---
 
+## ⚙️ Requisitos
 
-Demonstrar domínio sobre modelagem de sistemas orientados a objetos e integração com banco de dados relacional.
+Para rodar o projeto localmente, é necessário ter instalado:
 
+| Componente | Versão recomendada |
+|-------------|--------------------|
+| Java (JDK)  | 17 ou superior |
+| PostgreSQL  | 14 ou superior |
+| IDE         | IntelliJ, Eclipse ou NetBeans |
+| Maven       | (caso usem dependências externas) |
 
+---
 
-3. Funcionamento da MiniCloud
-O sistema MiniCloud simula o funcionamento básico de uma plataforma de computação em nuvem. As principais etapas são:
-Cadastro de Usuários e Planos:
- O usuário cria uma conta e escolhe um plano (por exemplo: Free, Standard ou Pro), que define o limite de crédito mensal e o número máximo de recursos que podem ser criados.
+```plaintext
 
+## 🧩 Estrutura do Projeto
+MiniCloud/
+├── src/
+│ ├── main/
+│ │ ├── java/
+│ │ │ ├── br/com/minicloud/
+│ │ │ │ ├── dominio/ # Classes de domínio (UsuarioCloud, PlanoCloud, etc.)
+│ │ │ │ ├── dao/ # Classes DAO com JDBC e PostgreSQL
+│ │ │ │ ├── excecoes/ # Exceções personalizadas
+│ │ │ │ └── ui/ # Interface gráfica (Swing/JavaFX)
+│ │ └── resources/
+│ │ └── config.properties # Configuração do banco (não subir pro Git)
+│ └── test/
+├── database/
+│ ├── schema.sql # Script de criação das tabelas
+│ └── sample_data.sql # Dados iniciais (planos de serviço)
+├── .gitignore
+└── README.md
+```
 
-Criação e Gerenciamento de Recursos:
- O usuário pode criar diferentes tipos de recursos de nuvem:
+---
 
+## 🧠 Passo a Passo – Como Rodar Localmente
 
-Instância de Computação: simula uma máquina virtual (CPU, memória, custo/hora).
+### 1️⃣ Clonar o repositório
 
+bash
+git clone https://github.com/seu-usuario/minicloud-poo.git
+cd minicloud-poo
 
-Banco de Dados Gerenciado: simula um serviço de banco de dados em nuvem, com armazenamento e replicação.
+2️⃣ Criar o banco de dados no PostgreSQL
 
+Abra o terminal do PostgreSQL (psql) e execute:
 
-Bucket de Armazenamento: simula um serviço de armazenamento de arquivos, com custo baseado em espaço e requisições.
+CREATE DATABASE minicloud;
+CREATE USER minicloud_user WITH PASSWORD 'minicloud_senha';
+GRANT ALL PRIVILEGES ON DATABASE minicloud TO minicloud_user;
 
+Depois conecte ao banco e rode o script do esquema:
 
-Cálculo de Custos e Persistência:
- O sistema calcula automaticamente o custo mensal total de acordo com o tipo e o tempo de uso de cada recurso.
- Todas as informações de usuários, planos e recursos são armazenadas e recuperadas de um banco de dados PostgreSQL.
+\c minicloud
+\i database/schema.sql
 
 
+Para popular a tabela de planos, rode:
 
-4. Relação com os Requisitos da Disciplina
-4.1 Fundamentos de POO (70%)
-Encapsulamento:
- Todos os atributos das classes serão privados e acessados por meio de métodos get e set, garantindo segurança e consistência dos dados.
+\i database/sample_data.sql
 
+3️⃣ Criar o arquivo de configuração
 
-Classes:
- O sistema contará com diversas classes, como UsuarioCloud, PlanoCloud, RecursoCloud (classe abstrata), InstanciaComputacao, BancoDadosGerenciado, BucketStorage, GerenciadorCloud e as classes de acesso a dados (DAO).
+Crie o arquivo src/main/resources/config.properties com suas credenciais locais:
 
+db.url=jdbc:postgresql://localhost:5432/minicloud
+db.user=minicloud_user
+db.password=minicloud_senha
 
-Classe abstrata e método abstrato:
- A classe RecursoCloud representará um modelo genérico de recurso de nuvem e conterá o método abstrato calcularCustoMensal(), que será implementado de forma específica por cada tipo de recurso.
 
+Importante: não suba este arquivo para o GitHub.
+Adicione ele ao .gitignore:
 
-Herança e sobrescrita:
- As classes InstanciaComputacao, BancoDadosGerenciado e BucketStorage herdarão de RecursoCloud e sobrescreverão o método abstrato, aplicando regras próprias de cálculo de custo.
+src/main/resources/config.properties
 
+4️⃣ Executar o projeto
 
-Polimorfismo:
- O sistema utilizará uma coleção (ArrayList<RecursoCloud>) para armazenar todos os recursos criados, permitindo chamadas polimórficas de métodos, como calcularCustoMensal(), sem conhecer o tipo exato de recurso.
+Abra o projeto na sua IDE preferida (ou terminal) e execute a classe principal:
 
+java -cp target/minicloud.jar br.com.minicloud.Main
 
-Associação entre classes:
- Cada UsuarioCloud estará associado a um PlanoCloud e poderá possuir uma lista de recursos (ArrayList<RecursoCloud>), representando a relação entre usuário, plano e recursos de nuvem.
 
+Ou simplesmente clique em Run dentro da IDE.
 
-Coleções de objetos:
- As listas de usuários, planos e recursos serão implementadas utilizando coleções Java (ArrayList), garantindo flexibilidade no gerenciamento dinâmico dos dados.
 
+🧱 Scripts SQL
+database/schema.sql
 
+Contém todas as tabelas necessárias (planos, usuarios, recursos, instancias_computacao, bancos_dados_gerenciados, buckets_storage).
 
-4.2 Recursos Complementares (20%)
-Exceções personalizadas:
- Será criada uma classe que estende Exception, como LimiteRecursosException, utilizada para sinalizar quando o usuário ultrapassar o limite de recursos permitido por seu plano ou em outras condições inválidas.
+database/sample_data.sql
 
+Exemplo de dados iniciais:
 
-Interface gráfica (GUI):
- O sistema contará com uma interface desenvolvida em Java Swing ou JavaFX, composta por telas que permitirão ao usuário realizar:
+INSERT INTO planos (nome, limite_credito, limite_recursos) VALUES
+('FREE',     50.00,  3),
+('STANDARD', 200.00, 10),
+('PRO',     1000.00, 50);
 
+💾 Conexão com o banco
 
-Cadastro de contas e planos;
+A conexão é gerenciada pela classe ConexaoBD, que lê o arquivo config.properties e inicializa o driver JDBC:
 
+Connection conexao = DriverManager.getConnection(url, user, password);
 
-Criação e gerenciamento de recursos;
 
+Cada classe DAO (por exemplo, UsuarioDAO, PlanoDAO, RecursoDAO) utiliza essa conexão para executar comandos SQL (INSERT, SELECT, UPDATE, DELETE).
 
-Consulta de custos mensais e informações gerais da nuvem simulada.
+🧱 Boas práticas do repositório
 
+Commits claros: use mensagens como feat: criar classe UsuarioDAO ou fix: ajustar cálculo de custo.
 
-Persistência em banco de dados (PostgreSQL):
- Em vez de arquivos CSV ou binários, o projeto utilizará o banco de dados PostgreSQL como mecanismo oficial de persistência.
- Todos os objetos do sistema — usuários, planos e recursos — serão armazenados e recuperados por meio de uma camada de acesso a dados (DAO), que executará as operações de CRUD (Create, Read, Update, Delete) através de instruções SQL.
- Isso garante integridade, consistência e persistência das informações entre diferentes execuções da aplicação.
+Branch por integrante: crie branches como mateus-dev e joao-dev para facilitar merge.
 
+Tarefas no Trello:
 
-Substituição autorizada do requisito de CSV/TXT:
- Conforme orientação da professora, o requisito de leitura de dados em CSV/TXT foi substituído pelo uso integral de banco de dados PostgreSQL, em virtude do domínio da equipe nessa tecnologia.
- Assim, todas as leituras e gravações de dados são realizadas diretamente no banco, de forma estruturada e relacional, refletindo práticas reais de desenvolvimento profissional.
+“Backlog” → tarefas a fazer
 
+“Em andamento” → em execução
 
+“Concluído” → finalizado e commitado
 
-4.3 Recursos Organizacionais (10%)
-Repositório GitHub:
- O projeto será hospedado em um repositório do GitHub, contendo todos os commits devidamente identificados, com mensagens claras e registro de contribuição de cada integrante do grupo.
+🧩 Tecnologias utilizadas
 
+Java 17
 
-Kanban (Trello):
- A gestão das tarefas será feita em um quadro no Trello, dividido em colunas como “Backlog”, “Em andamento” e “Concluído”, com cada membro responsável por atividades específicas.
+PostgreSQL
 
+JDBC
 
-Fluxograma:
- Será elaborado um fluxograma representando o fluxo principal do sistema — desde o login e criação de conta, passando pela escolha de plano, até a criação de recursos e cálculo de custo.
+Swing / JavaFX
 
+Maven (opcional)
 
-Diagrama de classes:
- Um diagrama simples representará as principais relações de herança, associação e composição entre as classes UsuarioCloud, PlanoCloud, RecursoCloud e suas subclasses.
+Git / Trello / GitHub
 
+🧾 Licença
 
+Projeto acadêmico desenvolvido para fins educacionais.
+Universidade: PUCPR
+Disciplina: Programação Orientada a Objetos
+Autores: [seus nomes e RA]
+Ano: 2025
 
-5. Arquitetura de Persistência com PostgreSQL
-A MiniCloud adotará uma arquitetura em camadas, garantindo separação de responsabilidades e organização do código:
-Camada de Domínio:
- Contém as classes que modelam as entidades centrais do sistema, como UsuarioCloud, PlanoCloud e RecursoCloud. Essa camada define as regras de negócio e o comportamento dos objetos.
 
+---
 
-Camada de Acesso a Dados (DAO):
- Responsável pela comunicação direta com o banco de dados PostgreSQL. Cada entidade possuirá sua própria classe DAO, contendo os métodos necessários para inserir, consultar, atualizar e excluir registros.
+### E mais dois arquivos úteis pra deixar o projeto pronto:
 
+#### `.gitignore`
 
-Camada de Interface (GUI):
- Composta pelas telas gráficas que permitem interação com o usuário, integrando-se à camada de domínio e à camada DAO para exibir e manipular os dados persistidos.
+```gitignore
+# Compilação Java
+*.class
+*.jar
 
+# Configurações locais
+src/main/resources/config.properties
 
-Essa arquitetura torna o sistema modular, facilita futuras expansões (como novos tipos de recursos de nuvem) e reflete boas práticas de engenharia de software e design orientado a objetos.
+# IDEs
+/.idea/
+/target/
+/out/
+/.venv/
+/.vscode/
 
-6. Conclusão do Escopo
-O projeto MiniCloud representa uma aplicação prática e moderna dos conceitos de Programação Orientada a Objetos, integrando teoria e prática em um contexto inspirado em provedores de computação em nuvem.
- A substituição dos arquivos CSV/TXT pelo banco de dados PostgreSQL enriquece o projeto, aproximando-o de ambientes profissionais e reforçando o domínio de tecnologias amplamente utilizadas em Engenharia de Dados e Desenvolvimento de Software.
-Com uma estrutura organizada em camadas, uso de herança, polimorfismo, exceções personalizadas, interface gráfica e persistência real em banco de dados, o sistema cumpre plenamente os requisitos da disciplina, demonstrando domínio técnico e aplicabilidade prática dos conceitos de POO.
+
+
+
+
+
+
