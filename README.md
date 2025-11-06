@@ -61,15 +61,19 @@ MiniCloud/
 ### 1️⃣ Clonar o repositório
 
 bash
+
 git clone https://github.com/seu-usuario/minicloud-poo.git
+
 cd minicloud-poo
 
-2️⃣ Criar o banco de dados no PostgreSQL
+###2️⃣ Criar o banco de dados no PostgreSQL
 
 Abra o terminal do PostgreSQL (psql) e execute:
 
 CREATE DATABASE minicloud;
+
 CREATE USER minicloud_user WITH PASSWORD 'minicloud_senha';
+
 GRANT ALL PRIVILEGES ON DATABASE minicloud TO minicloud_user;
 
 Depois conecte ao banco e rode o script do esquema:
@@ -87,7 +91,9 @@ Para popular a tabela de planos, rode:
 Crie o arquivo src/main/resources/config.properties com suas credenciais locais:
 
 db.url=jdbc:postgresql://localhost:5432/minicloud
+
 db.user=minicloud_user
+
 db.password=minicloud_senha
 
 
