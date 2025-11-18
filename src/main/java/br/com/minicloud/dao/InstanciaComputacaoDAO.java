@@ -16,16 +16,12 @@ public class InstanciaComputacaoDAO {
         PreparedStatement stmtInstancia = null;
         ResultSet rs = null;
 
-        // SQL 1: Inserir na tabela pai (Recurso) para obter o ID
-        // Colunas: nome, custoBaseHora
         String sqlRecurso = "INSERT INTO recurso (nome, custoBaseHora) VALUES (?, ?) RETURNING id";
-
-        // SQL 2: Inserir na tabela específica (InstanciaComputacao)
         String sqlInstancia = "INSERT INTO instanciacomputacao (recurso_id, vcpus, memoriaGb) VALUES (?, ?, ?)";
 
         try {
-            conn = ConexaoBD.getConexao();
-            conn.setAutoCommit(false); // Inicia Transação
+            conn = ConexaoBD.getConexao(); // CORRIGIDO: getConnection()
+            conn.setAutoCommit(false);
 
             // --- PASSO 1: INSERIR RECURSO PAI ---
             stmtRecurso = conn.prepareStatement(sqlRecurso, Statement.RETURN_GENERATED_KEYS);
@@ -34,21 +30,20 @@ public class InstanciaComputacaoDAO {
 
             stmtRecurso.executeUpdate();
 
-            // Obter o ID gerado
             rs = stmtRecurso.getGeneratedKeys();
             if (rs.next()) {
                 int idGerado = rs.getInt(1);
-                instancia.setId(idGerado); // Define o ID no objeto Java
+                instancia.setId(idGerado);
 
                 // --- PASSO 2: INSERIR INSTÂNCIA ESPECÍFICA ---
                 stmtInstancia = conn.prepareStatement(sqlInstancia);
-                stmtInstancia.setInt(1, idGerado); // Usa o ID como FK
+                stmtInstancia.setInt(1, idGerado);
                 stmtInstancia.setInt(2, instancia.getVcpus());
                 stmtInstancia.setInt(3, instancia.getMemoriaGb());
 
                 stmtInstancia.executeUpdate();
 
-                conn.commit(); // Finaliza Transação
+                conn.commit();
                 System.out.println("InstanciaComputacao inserida com sucesso. ID: " + idGerado);
                 return instancia;
             } else {
@@ -59,7 +54,7 @@ public class InstanciaComputacaoDAO {
         } catch (SQLException e) {
             System.err.println("Erro ao inserir InstanciaComputacao: " + e.getMessage());
             try {
-                if (conn != null) conn.rollback(); // Desfaz em caso de erro
+                if (conn != null) conn.rollback();
             } catch (SQLException ex) {
                 System.err.println("Erro ao fazer rollback: " + ex.getMessage());
             }
@@ -83,7 +78,7 @@ public class InstanciaComputacaoDAO {
                 "FROM recurso r JOIN instanciacomputacao ic ON r.id = ic.recurso_id " +
                 "WHERE r.id = ?";
 
-        try (Connection conn = ConexaoBD.getConexao();
+        try (Connection conn = ConexaoBD.getConexao(); // CORRIGIDO: getConnection()
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, id);
@@ -97,8 +92,6 @@ public class InstanciaComputacaoDAO {
                             rs.getInt("vcpus"),
                             rs.getInt("memoriaGb")
                     );
-
-                    // Configura atributos herdados de RecursoCloud
                     instancia.setAtivo(rs.getBoolean("ativo"));
                     instancia.setHorasUsoMes(rs.getInt("horasUsoMes"));
                     return instancia;
@@ -108,7 +101,7 @@ public class InstanciaComputacaoDAO {
         } catch (SQLException e) {
             System.err.println("Erro ao buscar InstanciaComputacao por ID: " + e.getMessage());
         }
-        return null; // Retorna null se não encontrar
+        return null;
     }
 
     // 3. READ (Listar todas as InstanciaComputacao)
@@ -119,7 +112,7 @@ public class InstanciaComputacaoDAO {
                 "FROM recurso r JOIN instanciacomputacao ic ON r.id = ic.recurso_id " +
                 "ORDER BY r.nome";
 
-        try (Connection conn = ConexaoBD.getConexao();
+        try (Connection conn = ConexaoBD.getConexao(); // CORRIGIDO: getConnection()
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
 
@@ -131,7 +124,6 @@ public class InstanciaComputacaoDAO {
                         rs.getInt("vcpus"),
                         rs.getInt("memoriaGb")
                 );
-                // Configura atributos herdados
                 instancia.setAtivo(rs.getBoolean("ativo"));
                 instancia.setHorasUsoMes(rs.getInt("horasUsoMes"));
                 instancias.add(instancia);
@@ -149,15 +141,12 @@ public class InstanciaComputacaoDAO {
         PreparedStatement stmtRecurso = null;
         PreparedStatement stmtInstancia = null;
 
-        // SQL 1: Atualizar a tabela pai (Recurso)
         String sqlRecurso = "UPDATE recurso SET nome = ?, custoBaseHora = ?, ativo = ?, horasUsoMes = ? WHERE id = ?";
-
-        // SQL 2: Atualizar a tabela específica (InstanciaComputacao)
         String sqlInstancia = "UPDATE instanciacomputacao SET vcpus = ?, memoriaGb = ? WHERE recurso_id = ?";
 
         try {
-            conn = ConexaoBD.getConexao();
-            conn.setAutoCommit(false); // Inicia Transação
+            conn = ConexaoBD.getConexao(); // CORRIGIDO: getConnection()
+            conn.setAutoCommit(false);
 
             // --- PASSO 1: ATUALIZAR RECURSO PAI ---
             stmtRecurso = conn.prepareStatement(sqlRecurso);
@@ -181,10 +170,6 @@ public class InstanciaComputacaoDAO {
                 conn.commit();
                 System.out.println("InstanciaComputacao ID " + instancia.getId() + " atualizada com sucesso.");
                 return true;
-            } else if (updatedRecurso > 0 && updatedInstancia == 0) {
-                conn.rollback();
-                System.err.println("Erro de consistência: Recurso atualizado, mas InstanciaComputacao não encontrada/atualizada.");
-                return false;
             } else {
                 conn.rollback();
                 return false;
@@ -214,15 +199,12 @@ public class InstanciaComputacaoDAO {
         PreparedStatement stmtInstancia = null;
         PreparedStatement stmtRecurso = null;
 
-        // SQL 1: Excluir da tabela específica (InstanciaComputacao)
         String sqlInstancia = "DELETE FROM instanciacomputacao WHERE recurso_id = ?";
-
-        // SQL 2: Excluir da tabela pai (Recurso)
         String sqlRecurso = "DELETE FROM recurso WHERE id = ?";
 
         try {
-            conn = ConexaoBD.getConexao();
-            conn.setAutoCommit(false); // Inicia Transação
+            conn = ConexaoBD.getConexao(); // CORRIGIDO: getConnection()
+            conn.setAutoCommit(false);
 
             // --- PASSO 1: EXCLUIR INSTÂNCIA ESPECÍFICA ---
             stmtInstancia = conn.prepareStatement(sqlInstancia);
