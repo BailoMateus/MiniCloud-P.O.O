@@ -1,5 +1,7 @@
 package br.com.minicloud.dominio;
 
+import br.com.minicloud.exceptions.LimiteRecursosPlanoException;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,11 +37,13 @@ public class GerenciadorRecursos {
             String nome,
             double custoBaseHora,
             int vcpus,
-            int memoriaGb) {
+            int memoriaGb) throws LimiteRecursosPlanoException {
 
         if (!podeCriarMaisRecursos(usuario)) {
-            // GUI pode tratar null como "limite atingido"
-            return null;
+            throw new LimiteRecursosPlanoException(
+                    "Usuário '" + usuario.getNome() + "' atingiu o limite de recursos do plano: " +
+                            usuario.getPlano().getNome()
+            );
         }
 
         InstanciaComputacao inst = new InstanciaComputacao(
@@ -63,10 +67,13 @@ public class GerenciadorRecursos {
             double custoBaseHora,
             int armazenamentoGb,
             boolean replicacaoAtiva,
-            double custoPorGb) {
+            double custoPorGb) throws LimiteRecursosPlanoException {
 
         if (!podeCriarMaisRecursos(usuario)) {
-            return null;
+            throw new LimiteRecursosPlanoException(
+                    "Usuário '" + usuario.getNome() + "' atingiu o limite de recursos do plano: " +
+                            usuario.getPlano().getNome()
+            );
         }
 
         BancoDadosGerenciado db = new BancoDadosGerenciado(
@@ -90,10 +97,13 @@ public class GerenciadorRecursos {
             String nome,
             double custoBaseHora,
             int armazenamentoGb,
-            double custoPorGb) {
+            double custoPorGb) throws LimiteRecursosPlanoException {
 
         if (!podeCriarMaisRecursos(usuario)) {
-            return null;
+            throw new LimiteRecursosPlanoException(
+                    "Usuário '" + usuario.getNome() + "' atingiu o limite de recursos do plano: " +
+                            usuario.getPlano().getNome()
+            );
         }
 
         BucketStorage bucket = new BucketStorage(
