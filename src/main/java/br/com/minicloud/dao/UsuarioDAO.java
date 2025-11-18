@@ -1,6 +1,6 @@
 package br.com.minicloud.dao;
 
-import br.com.minicloud.model.Usuario;
+import br.com.minicloud.dominio.Usuario;
 import br.com.minicloud.dao.ConexaoBD;
 import java.sql.*;
 import java.util.ArrayList;

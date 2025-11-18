@@ -6,66 +6,68 @@ import br.com.minicloud.dao.RecursoCloudDAO;
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import java.awt.*;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.List;
-import java.text.NumberFormat;
 import java.util.Locale;
 
 public class TelaListagemFatura extends JFrame {
 
-    // --- Backend e Simulação ---
+    // --- Backend ---
     private GerenciadorRecursos gerenciador;
-    // Simulação do usuário logado (deve ser o mesmo da tela de criação para manter a consistência)
     private Usuario usuarioLogado;
-    // DAO para buscar os recursos (simulando a busca no BD)
+    // DAO (não usado ainda, mas deixei para futura integração)
     private RecursoCloudDAO recursoDAO = new RecursoCloudDAO();
 
     // --- Componentes ---
     private JTable tabelaRecursos;
     private RecursoTableModel tableModel;
     private JLabel lblTotalFatura;
-    private JButton btnAdicionarHoras; // Ação em massa
+    private JButton btnAdicionarHoras;
 
     public TelaListagemFatura(GerenciadorRecursos gerenciador, Usuario usuarioLogado) {
         super("Listagem de Recursos e Fatura");
+
         this.gerenciador = gerenciador;
         this.usuarioLogado = usuarioLogado;
 
         inicializarComponentes();
         configurarLayout();
-        carregarRecursosSimulados(); // Carrega dados iniciais na tabela
+        carregarRecursos();  // carrega dados iniciais
         adicionarListeners();
 
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(700, 500);
         setLocationRelativeTo(null);
         setVisible(true);
     }
 
-    // --- Subtasks: Layout e Modelo de Tabela ---
+    // ============================
+    // Inicialização de componentes
+    // ============================
 
     private void inicializarComponentes() {
         tableModel = new RecursoTableModel();
         tabelaRecursos = new JTable(tableModel);
 
-        // Formata o valor na label para Real Brasileiro (R$)
         NumberFormat nf = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
         double total = gerenciador.calcularTotalFatura(usuarioLogado);
         lblTotalFatura = new JLabel("Total da Fatura Mensal: " + nf.format(total));
         lblTotalFatura.setFont(new Font("SansSerif", Font.BOLD, 18));
 
-        btnAdicionarHoras = new JButton("Adicionar 10 Horas de Uso a TODOS"); // Simula o uso mensal
+        btnAdicionarHoras = new JButton("Adicionar 10 Horas de Uso a TODOS");
     }
 
     private void configurarLayout() {
         setLayout(new BorderLayout(10, 10));
 
-        // Tabela de Listagem
+        // Tabela de recursos
         JPanel panelTabela = new JPanel(new BorderLayout());
-        panelTabela.setBorder(BorderFactory.createTitledBorder("Recursos Criados"));
+        panelTabela.setBorder(BorderFactory.createTitledBorder(
+                "Recursos do usuário: " + usuarioLogado.getNome()));
         panelTabela.add(new JScrollPane(tabelaRecursos), BorderLayout.CENTER);
 
-        // Painel Inferior (Fatura e Ações)
+        // Painel inferior
         JPanel panelFatura = new JPanel(new BorderLayout());
         panelFatura.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -79,33 +81,27 @@ public class TelaListagemFatura extends JFrame {
         add(panelFatura, BorderLayout.SOUTH);
     }
 
-    /**
-     * Carrega dados simulados (ou do BD real) para o objeto Usuario e atualiza a tabela.
-     */
-    private void carregarRecursosSimulados() {
-        // NOTA: Em uma aplicação real, você faria uma busca complexa no BD aqui,
-        // mas como o GerenciadorRecursos gerencia a lista em memória (por enquanto),
-        // usamos a lista interna dele para popular a GUI.
+    // ============================
+    // Carregar dados e listeners
+    // ============================
 
-        // Se você não usasse o GerenciadorRecursos para gerenciar o estado,
-        // a lógica seria:
-        // List<RecursoCloud> recursosDoBD = recursoDAO.listarRecursosPorUsuario(usuarioLogado.getId());
-        // usuarioLogado.setRecursos(recursosDoBD);
-
+    private void carregarRecursos() {
+        // Aqui você poderia buscar do BD via recursoDAO.listarRecursosPorUsuario(...)
+        // Por enquanto, usamos o GerenciadorRecursos + lista do usuário
         tableModel.setFaturaItens(gerenciador.gerarFatura(usuarioLogado));
         atualizarTotalFatura();
     }
 
     private void adicionarListeners() {
         btnAdicionarHoras.addActionListener(e -> {
-            // Lógica: Adiciona 10 horas de uso a CADA recurso do usuário
+            // Adiciona 10 horas de uso a cada recurso do usuário
             for (RecursoCloud recurso : usuarioLogado.getRecursos()) {
                 recurso.adicionarHorasUso(10);
             }
 
-            // Recarrega e recalcula
-            carregarRecursosSimulados();
-            JOptionPane.showMessageDialog(this, "10 horas de uso adicionadas. Fatura recalculada.");
+            carregarRecursos();
+            JOptionPane.showMessageDialog(this,
+                    "10 horas de uso adicionadas a todos os recursos.\nFatura recalculada.");
         });
     }
 
@@ -113,14 +109,15 @@ public class TelaListagemFatura extends JFrame {
         NumberFormat nf = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
         double total = gerenciador.calcularTotalFatura(usuarioLogado);
         lblTotalFatura.setText("Total da Fatura Mensal: " + nf.format(total));
-        tableModel.fireTableDataChanged(); // Força a tabela a redesenhar
+        tableModel.fireTableDataChanged();
     }
 
+    // ============================
+    // Modelo de tabela
+    // ============================
 
-    /**
-     * Modelo de Tabela Customizado para exibir FaturaItem.
-     */
     private class RecursoTableModel extends AbstractTableModel {
+
         private final String[] colunas = {"ID", "Nome", "Tipo", "Horas/Mês", "Custo Mensal"};
         private List<FaturaItem> faturaItens;
 
@@ -152,44 +149,23 @@ public class TelaListagemFatura extends JFrame {
         public Object getValueAt(int rowIndex, int columnIndex) {
             FaturaItem item = faturaItens.get(rowIndex);
 
-            // Assumimos que o GerenciadorRecursos precisa do ID real do recurso.
-            // O FaturaItem não tem o ID. Usamos a posição da linha ou implementamos a busca.
-            // Para simplificar, vamos deixar o ID vazio na coluna por enquanto:
-
             switch (columnIndex) {
-                case 0: return "-"; // ID real, complicado sem o mapeamento.
-                case 1: return item.getNomeRecurso();
-                case 2: return item.getTipoRecurso();
-                case 3: return item.getHorasUso();
+                case 0:
+                    // FaturaItem não tem ID do recurso.
+                    // Se quiser, pode mapear depois usando a posição ou alterar o modelo.
+                    return "-";
+                case 1:
+                    return item.getNomeRecurso();
+                case 2:
+                    return item.getTipoRecurso();
+                case 3:
+                    return item.getHorasUso();
                 case 4:
-                    // Formata o custo para exibição (R$ X.XX)
                     NumberFormat nf = NumberFormat.getCurrencyInstance(new Locale("pt", "BR"));
                     return nf.format(item.getCustoMensal());
-                default: return null;
+                default:
+                    return null;
             }
         }
-    }
-
-    // --- Método Main para Teste ---
-    public static void main(String[] args) {
-        // 1. Configurar o ambiente (O mesmo usado na TelaCriacaoRecursos)
-        GerenciadorRecursos gr = new GerenciadorRecursos();
-
-        // Usuário Simulado (Plano Básico, limite 3, Crédito 500.0)
-        Plano plano = new Plano(1, "Básico", 500.0, 3);
-        Usuario usuario = new Usuario(10, "João da Nuvem", "joao@minicloud.com", plano);
-
-        // 2. Criar alguns recursos no Gerenciador (Simula a persistência)
-        gr.criarInstanciaComputacao(usuario, "Webserver-Prod", 0.15, 4, 8);
-        gr.criarBucketStorage(usuario, "Arquivos-Clientes", 0.0, 500, 0.01);
-        gr.criarBancoDadosGerenciado(usuario, "DB-Principal", 0.25, 100, true, 0.04);
-
-        // 3. Simular algum uso inicial
-        for (RecursoCloud r : usuario.getRecursos()) {
-            r.adicionarHorasUso(100);
-        }
-
-        // 4. Iniciar a GUI
-        SwingUtilities.invokeLater(() -> new TelaListagemFatura(gr, usuario));
     }
 }

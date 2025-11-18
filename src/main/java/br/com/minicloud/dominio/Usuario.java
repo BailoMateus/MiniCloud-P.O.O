@@ -8,30 +8,66 @@ public class Usuario {
     private int id;
     private String nome;
     private String email;
+    private String senha;
+    private Plano plano;
+    private List<RecursoCloud> recursos;
 
-    private Plano plano;                      // Plano do usuário (FREE, STANDARD, PRO)
-    private List<RecursoCloud> recursos;      // Recursos criados por esse usuário
+    // Construtor base privado para centralizar inicialização
+    private void initLista() {
+        if (this.recursos == null) {
+            this.recursos = new ArrayList<>();
+        }
+    }
 
-    // Construtor completo (útil se quiser ligar com banco depois)
-    public Usuario(int id, String nome, String email, Plano plano) {
+    // ==== CONSTRUTORES ====
+
+    // 1) Usado pelo UsuarioDAO (SELECT)
+    public Usuario(int id, String nome, String email, String senha) {
         this.id = id;
         this.nome = nome;
         this.email = email;
+        this.senha = senha;
+        this.plano = null;
+        initLista();
+    }
+
+    // 2) Usado pelo UsuarioDAO (INSERT)
+    public Usuario(String nome, String email, String senha) {
+        this(0, nome, email, senha);
+    }
+
+    // 3) Completo, com plano (pode ser usado em SELECT que joinam plano)
+    public Usuario(int id, String nome, String email, String senha, Plano plano) {
+        this.id = id;
+        this.nome = nome;
+        this.email = email;
+        this.senha = senha;
         this.plano = plano;
-        this.recursos = new ArrayList<>();
+        initLista();
     }
 
-    // Construtor sem ID (para usar na lógica antes de salvar no banco)
+    // 4) Sem id, com plano (INSERT quando já sabe o plano)
+    public Usuario(String nome, String email, String senha, Plano plano) {
+        this(0, nome, email, senha, plano);
+    }
+
+    // 5) Construtor usado na TelaCriacaoRecursos (sem senha, com plano)
+    public Usuario(int id, String nome, String email, Plano plano) {
+        this(id, nome, email, null, plano);
+    }
+
+    // 6) Versão sem id e sem senha, com plano (para testes se precisar)
     public Usuario(String nome, String email, Plano plano) {
-        this(0, nome, email, plano);
+        this(0, nome, email, null, plano);
     }
 
-    // ============ Getters e Setters ============
+    // ==== GETTERS / SETTERS ====
+
     public int getId() {
         return id;
     }
 
-    public void setId(int id) { // se depois você quiser sincronizar com o banco
+    public void setId(int id) {
         this.id = id;
     }
 
@@ -51,6 +87,14 @@ public class Usuario {
         this.email = email;
     }
 
+    public String getSenha() {
+        return senha;
+    }
+
+    public void setSenha(String senha) {
+        this.senha = senha;
+    }
+
     public Plano getPlano() {
         return plano;
     }
@@ -60,9 +104,6 @@ public class Usuario {
     }
 
     public List<RecursoCloud> getRecursos() {
-        if (recursos == null) {
-            recursos = new ArrayList<>();
-        }
         return recursos;
     }
 
@@ -70,13 +111,13 @@ public class Usuario {
         this.recursos = recursos;
     }
 
-    // ============ Métodos de conveniência ============
-    public void adicionarRecurso(RecursoCloud recurso) {
-        getRecursos().add(recurso);
-    }
+    // ==== MÉTODOS DE DOMÍNIO ====
 
-    public void removerRecurso(RecursoCloud recurso) {
-        getRecursos().remove(recurso);
+    public void adicionarRecurso(RecursoCloud recurso) {
+        initLista();
+        if (recurso != null) {
+            recursos.add(recurso);
+        }
     }
 
     @Override
@@ -86,7 +127,6 @@ public class Usuario {
                 ", nome='" + nome + '\'' +
                 ", email='" + email + '\'' +
                 ", plano=" + (plano != null ? plano.getNome() : "sem plano") +
-                ", qtdRecursos=" + (recursos != null ? recursos.size() : 0) +
                 '}';
     }
 }
