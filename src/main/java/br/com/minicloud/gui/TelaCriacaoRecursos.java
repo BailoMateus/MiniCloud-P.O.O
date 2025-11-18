@@ -11,8 +11,7 @@ public class TelaCriacaoRecursos extends JFrame {
     // --- Backend e Simulação de Usuário ---
     private GerenciadorRecursos gerenciador;
     // Simulação de usuário logado com Plano Básico (limite de 3 recursos para teste)
-    private Usuario usuarioLogado = new Usuario("Testador", new Plano("Básico", 3));
-
+    private Usuario usuarioLogado = new Usuario("Testador", "teste@cloud.com", new Plano("Básico", 500.0, 3));
     // --- Componentes Comuns ---
     private JComboBox<String> cmbTipoRecurso;
     private JTextField txtNomeRecurso;
