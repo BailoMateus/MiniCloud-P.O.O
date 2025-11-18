@@ -9,54 +9,53 @@ import java.util.Properties;
 
 public class ConexaoBD {
 
-    private static Connection conexao = null;
+    // Agora não guardamos mais a conexão em um campo estático.
+    public static Connection getConexao() throws SQLException {
+        try {
+            Properties props = new Properties();
 
-    public static Connection getConexao() {
-        if (conexao == null) {
-            try {
-                Properties props = new Properties();
+            // Caminho do arquivo de configuração
+            FileInputStream arquivo = new FileInputStream("src/main/resources/config.properties");
+            props.load(arquivo);
 
-                // Lê o arquivo de configuração
-                FileInputStream arquivo = new FileInputStream("src/main/resources/config.properties");
-                props.load(arquivo);
+            String url = props.getProperty("db.url");
+            String user = props.getProperty("db.user");
+            String password = props.getProperty("db.password");
 
-                String url = props.getProperty("db.url");
-                String user = props.getProperty("db.user");
-                String password = props.getProperty("db.password");
+            // Carrega o driver do PostgreSQL (só precisa uma vez, mas não faz mal repetir)
+            Class.forName("org.postgresql.Driver");
 
-                // Carrega o driver do PostgreSQL
-                Class.forName("org.postgresql.Driver");
+            // Cria e devolve uma NOVA conexão
+            Connection conexao = DriverManager.getConnection(url, user, password);
+            System.out.println("Conexão estabelecida com sucesso!");
+            return conexao;
 
-                // Conecta ao PostgreSQL
-                conexao = DriverManager.getConnection(url, user, password);
-                System.out.println(" Conexão estabelecida com sucesso!");
-
-            } catch (IOException e) {
-                System.out.println(" Erro ao ler o arquivo config.properties: " + e.getMessage());
-            } catch (ClassNotFoundException e) {
-                System.out.println(" Driver do PostgreSQL não encontrado: " + e.getMessage());
-            } catch (SQLException e) {
-                System.out.println(" Erro ao conectar ao banco de dados: " + e.getMessage());
-            }
+        } catch (IOException e) {
+            System.out.println("Erro ao ler o arquivo config.properties: " + e.getMessage());
+            throw new SQLException("Falha ao carregar config.properties", e);
+        } catch (ClassNotFoundException e) {
+            System.out.println("Driver do PostgreSQL não encontrado: " + e.getMessage());
+            throw new SQLException("Driver do PostgreSQL não encontrado", e);
         }
-        return conexao;
     }
 
-    public static void fecharConexao() {
+    public static void fecharConexao(Connection conexao) {
         if (conexao != null) {
             try {
                 conexao.close();
-                conexao = null;
-                System.out.println(" Conexão fechada com sucesso.");
+                System.out.println("Conexão fechada com sucesso.");
             } catch (SQLException e) {
-                System.out.println(" Erro ao fechar a conexão: " + e.getMessage());
+                System.out.println("Erro ao fechar a conexão: " + e.getMessage());
             }
         }
     }
 
-    // Teste rápido de conexão
+    // Teste rápido
     public static void main(String[] args) {
-        getConexao();    // tenta conectar
-        fecharConexao(); // fecha ao final
+        try (Connection conn = getConexao()) {
+            // só abre e fecha
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
     }
 }

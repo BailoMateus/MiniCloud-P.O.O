@@ -1,6 +1,6 @@
 package br.com.minicloud.gui;
 
-import br.com.minicloud.model.Usuario;
+import br.com.minicloud.dominio.Usuario;
 import br.com.minicloud.dao.UsuarioDAO; // Importa o DAO
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -35,11 +35,9 @@ public class TelaCadastroUsuario extends JFrame {
         setLocationRelativeTo(null); // Centraliza a tela
         setVisible(true);
 
-        // Adiciona um listener para fechar a conexão ao fechar a janela
         addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                ConexaoBD.fecharConexao();
                 System.exit(0);
             }
         });
