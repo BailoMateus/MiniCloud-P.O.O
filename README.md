@@ -66,19 +66,42 @@ git clone https://github.com/seu-usuario/minicloud-poo.git
 
 cd minicloud-poo
 
-###2️⃣ Criar o banco de dados no PostgreSQL
+###2️⃣ Configuração do Banco de Dados PostgreSQL (MiniCloud)
 
-Abra o terminal do PostgreSQL (psql) e execute:
 
+```
+Execute os comandos abaixo em um terminal SQL do PostgreSQL (psql) usando um usuário com permissão de superusuário, como postgres.
+
+Esses comandos criam o banco, o usuário, e concedem todas as permissões necessárias para o sistema MiniCloud funcionar corretamente.
+Inclui permissões para SCHEMA, TABLES e SEQUENCES — que são essenciais no PostgreSQL e não estão cobertas apenas por GRANT ALL PRIVILEGES ON DATABASE.
+
+-- 1) Criar o banco de dados
 CREATE DATABASE minicloud;
 
+-- 2) Criar usuário para a aplicação
 CREATE USER minicloud_user WITH PASSWORD 'minicloud_senha';
 
+-- 3) Dar permissão para o usuário conectar no banco
 GRANT ALL PRIVILEGES ON DATABASE minicloud TO minicloud_user;
 
-Depois conecte ao banco e rode o script do esquema:
+-- 4) Conectar ao banco
+\c minicloud;
 
-\c minicloud
+-- 5) Garantir acesso ao schema public
+GRANT USAGE ON SCHEMA public TO minicloud_user;
+
+-- 6) Permissão total para manipular tabelas já existentes (SELECT/INSERT/UPDATE/DELETE)
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO minicloud_user;
+
+-- 7) Permissão nas sequências (necessário por causa do SERIAL / IDENTITY)
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO minicloud_user;
+
+-- 8) Garantir que futuras tabelas criadas também tenham permissões automaticamente
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO minicloud_user;
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT ALL ON SEQUENCES TO minicloud_user;
 \i database/schema.sql
 
 
@@ -86,10 +109,12 @@ Para popular a tabela de planos, rode:
 
 \i database/sample_data.sql
 
+```
+
 3️⃣ Criar o arquivo de configuração
 
 Crie o arquivo src/main/resources/config.properties com suas credenciais locais:
-
+```
 db.url=jdbc:postgresql://localhost:5432/minicloud
 
 db.user=minicloud_user
@@ -101,7 +126,7 @@ Importante: não suba este arquivo para o GitHub.
 Adicione ele ao .gitignore:
 
 src/main/resources/config.properties
-
+```
 4️⃣ Executar o projeto
 
 Abra o projeto na sua IDE preferida (ou terminal) e execute a classe principal:
