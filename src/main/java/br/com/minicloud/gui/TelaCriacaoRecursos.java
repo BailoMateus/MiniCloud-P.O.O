@@ -11,7 +11,7 @@ public class TelaCriacaoRecursos extends JFrame {
     private final GerenciadorRecursos gerenciador;
     private final Usuario usuarioLogado;
 
-    // --- Componentes da Tela ---
+    // --- Componentes básicos ---
     private JComboBox<String> cmbTipoRecurso;
     private JPanel panelFormulario;
     private JPanel panelCamposEspecificos;
@@ -19,7 +19,7 @@ public class TelaCriacaoRecursos extends JFrame {
     private JTextField txtCustoBaseHora;
     private JButton btnCriar;
 
-    // --- Componentes Dinâmicos ---
+    // --- Campos dinâmicos ---
     private JTextField txtVcpus;
     private JTextField txtMemoriaGb;
 
@@ -70,7 +70,7 @@ public class TelaCriacaoRecursos extends JFrame {
 
         btnCriar = new JButton("Criar Recurso");
 
-        // Campos específicos começam como EC2
+        // Começa com EC2 por padrão
         atualizarFormulario();
     }
 
@@ -78,15 +78,16 @@ public class TelaCriacaoRecursos extends JFrame {
         setLayout(new BorderLayout(10, 10));
 
         // Cabeçalho
+        String nomePlano = (usuarioLogado.getPlano() != null ? usuarioLogado.getPlano().getNome() : "Sem plano");
         JLabel lblTitulo = new JLabel(
                 "Criar Recurso para: " + usuarioLogado.getNome() +
-                        " | Plano: " + (usuarioLogado.getPlano() != null ? usuarioLogado.getPlano().getNome() : "Não definido"),
+                        " | Plano: " + nomePlano,
                 SwingConstants.CENTER
         );
         lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 16));
         add(lblTitulo, BorderLayout.NORTH);
 
-        // Corpo
+        // Centro
         JPanel panelCentro = new JPanel(new BorderLayout(10, 10));
 
         JPanel panelTipo = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -95,7 +96,6 @@ public class TelaCriacaoRecursos extends JFrame {
 
         panelCentro.add(panelTipo, BorderLayout.NORTH);
 
-        // Formulário
         panelFormulario.removeAll();
         panelFormulario.add(criarLinhaCampo("Nome do Recurso:", txtNome));
         panelFormulario.add(criarLinhaCampo("Custo Base por Hora:", txtCustoBaseHora));
@@ -106,9 +106,15 @@ public class TelaCriacaoRecursos extends JFrame {
 
         add(panelCentro, BorderLayout.CENTER);
 
-        // Rodapé
+        // Rodapé com botão Voltar + Criar
         JPanel panelSul = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        JButton btnVoltar = new JButton("Voltar ao Menu");
+        btnVoltar.addActionListener(e -> dispose());
+
+        panelSul.add(btnVoltar);
         panelSul.add(btnCriar);
+
         add(panelSul, BorderLayout.SOUTH);
     }
 
@@ -126,7 +132,6 @@ public class TelaCriacaoRecursos extends JFrame {
 
     private void adicionarListeners() {
         cmbTipoRecurso.addActionListener(e -> atualizarFormulario());
-
         btnCriar.addActionListener(e -> criarRecurso());
     }
 
@@ -141,15 +146,9 @@ public class TelaCriacaoRecursos extends JFrame {
         if (tipo == null) return;
 
         switch (tipo) {
-            case "Instância de Computação (EC2)":
-                adicionarCamposEC2();
-                break;
-            case "Banco de Dados Gerenciado (RDS)":
-                adicionarCamposRDS();
-                break;
-            case "Bucket de Storage (S3)":
-                adicionarCamposS3();
-                break;
+            case "Instância de Computação (EC2)" -> adicionarCamposEC2();
+            case "Banco de Dados Gerenciado (RDS)" -> adicionarCamposRDS();
+            case "Bucket de Storage (S3)" -> adicionarCamposS3();
         }
 
         panelCamposEspecificos.revalidate();
@@ -175,7 +174,7 @@ public class TelaCriacaoRecursos extends JFrame {
         panelCheck.add(chkReplicacaoAtiva);
         panelCamposEspecificos.add(panelCheck);
 
-        panelCamposEspecificos.add(criarLinhaCampo("Custo por GB:", txtCustoPorGbDb));
+        panelCamposEspecificos.add(criarLinhaCampo("Custo por GB (informativo):", txtCustoPorGbDb));
     }
 
     private void adicionarCamposS3() {
@@ -183,11 +182,11 @@ public class TelaCriacaoRecursos extends JFrame {
         txtCustoPorGbBucket = new JTextField(10);
 
         panelCamposEspecificos.add(criarLinhaCampo("Armazenamento (GB):", txtArmazenamentoBucket));
-        panelCamposEspecificos.add(criarLinhaCampo("Custo por GB:", txtCustoPorGbBucket));
+        panelCamposEspecificos.add(criarLinhaCampo("Custo por GB (informativo):", txtCustoPorGbBucket));
     }
 
     // ============================
-    // Criação de recurso
+    // Criação do recurso (integração com GerenciadorRecursos)
     // ============================
 
     private void criarRecurso() {
@@ -216,42 +215,11 @@ public class TelaCriacaoRecursos extends JFrame {
 
         try {
             if ("Instância de Computação (EC2)".equals(tipo)) {
-                int vcpus = Integer.parseInt(txtVcpus.getText().trim());
-                int memoria = Integer.parseInt(txtMemoriaGb.getText().trim());
-
-                gerenciador.criarInstanciaComputacao(
-                        usuarioLogado,
-                        nome,
-                        custoBaseHora,
-                        vcpus,
-                        memoria
-                );
-
+                criarInstanciaEC2(nome, custoBaseHora);
             } else if ("Banco de Dados Gerenciado (RDS)".equals(tipo)) {
-                int armazenamento = Integer.parseInt(txtArmazenamentoDb.getText().trim());
-                boolean replicacao = chkReplicacaoAtiva.isSelected();
-                double custoPorGb = Double.parseDouble(txtCustoPorGbDb.getText().trim().replace(",", "."));
-
-                gerenciador.criarBancoDadosGerenciado(
-                        usuarioLogado,
-                        nome,
-                        custoBaseHora,
-                        armazenamento,
-                        replicacao,
-                        custoPorGb
-                );
-
+                criarBancoRDS(nome, custoBaseHora);
             } else if ("Bucket de Storage (S3)".equals(tipo)) {
-                int armazenamento = Integer.parseInt(txtArmazenamentoBucket.getText().trim());
-                double custoPorGb = Double.parseDouble(txtCustoPorGbBucket.getText().trim().replace(",", "."));
-
-                gerenciador.criarBucketStorage(
-                        usuarioLogado,
-                        nome,
-                        custoBaseHora,
-                        armazenamento,
-                        custoPorGb
-                );
+                criarBucketS3(nome, custoBaseHora);
             }
 
             JOptionPane.showMessageDialog(this,
@@ -270,17 +238,81 @@ public class TelaCriacaoRecursos extends JFrame {
                     ex.getMessage(),
                     "Limite de recursos atingido",
                     JOptionPane.WARNING_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Erro inesperado ao criar recurso: " + ex.getMessage(),
+                    "Erro",
+                    JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
+    }
+
+    private void criarInstanciaEC2(String nome, double custoBaseHora)
+            throws LimiteRecursosPlanoException, NumberFormatException {
+
+        int vcpus = Integer.parseInt(txtVcpus.getText().trim());
+        int memoria = Integer.parseInt(txtMemoriaGb.getText().trim());
+
+        gerenciador.criarInstanciaComputacao(
+                usuarioLogado,
+                nome,
+                custoBaseHora,
+                vcpus,
+                memoria
+        );
+    }
+
+    private void criarBancoRDS(String nome, double custoBaseHora)
+            throws LimiteRecursosPlanoException, NumberFormatException {
+
+        int armazenamento = Integer.parseInt(txtArmazenamentoDb.getText().trim());
+        boolean replicacao = chkReplicacaoAtiva != null && chkReplicacaoAtiva.isSelected();
+
+        double custoPorGb = 0.0;
+        if (txtCustoPorGbDb != null && !txtCustoPorGbDb.getText().trim().isEmpty()) {
+            custoPorGb = Double.parseDouble(txtCustoPorGbDb.getText().trim().replace(",", "."));
+        }
+
+        gerenciador.criarBancoDadosGerenciado(
+                usuarioLogado,
+                nome,
+                custoBaseHora,
+                armazenamento,
+                replicacao,
+                custoPorGb
+        );
+    }
+
+    private void criarBucketS3(String nome, double custoBaseHora)
+            throws LimiteRecursosPlanoException, NumberFormatException {
+
+        int armazenamento = Integer.parseInt(txtArmazenamentoBucket.getText().trim());
+
+        double custoPorGb = 0.0;
+        if (txtCustoPorGbBucket != null && !txtCustoPorGbBucket.getText().trim().isEmpty()) {
+            custoPorGb = Double.parseDouble(txtCustoPorGbBucket.getText().trim().replace(",", "."));
+        }
+
+        gerenciador.criarBucketStorage(
+                usuarioLogado,
+                nome,
+                custoBaseHora,
+                armazenamento,
+                custoPorGb
+        );
     }
 
     private void limparCampos() {
         txtNome.setText("");
         txtCustoBaseHora.setText("");
+
         if (txtVcpus != null) txtVcpus.setText("");
         if (txtMemoriaGb != null) txtMemoriaGb.setText("");
+
         if (txtArmazenamentoDb != null) txtArmazenamentoDb.setText("");
         if (txtCustoPorGbDb != null) txtCustoPorGbDb.setText("");
         if (chkReplicacaoAtiva != null) chkReplicacaoAtiva.setSelected(false);
+
         if (txtArmazenamentoBucket != null) txtArmazenamentoBucket.setText("");
         if (txtCustoPorGbBucket != null) txtCustoPorGbBucket.setText("");
     }
