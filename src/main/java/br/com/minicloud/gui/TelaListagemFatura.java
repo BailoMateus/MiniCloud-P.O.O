@@ -1,7 +1,6 @@
 package br.com.minicloud.gui;
 
 import br.com.minicloud.dominio.*;
-import br.com.minicloud.dao.RecursoCloudDAO;
 
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
@@ -13,13 +12,9 @@ import java.util.Locale;
 
 public class TelaListagemFatura extends JFrame {
 
-    // --- Backend ---
-    private GerenciadorRecursos gerenciador;
-    private Usuario usuarioLogado;
-    // DAO (não usado ainda, mas deixei para futura integração)
-    private RecursoCloudDAO recursoDAO = new RecursoCloudDAO();
+    private final GerenciadorRecursos gerenciador;
+    private final Usuario usuarioLogado;
 
-    // --- Componentes ---
     private JTable tabelaRecursos;
     private RecursoTableModel tableModel;
     private JLabel lblTotalFatura;
@@ -31,9 +26,12 @@ public class TelaListagemFatura extends JFrame {
         this.gerenciador = gerenciador;
         this.usuarioLogado = usuarioLogado;
 
+        // Carrega recursos do usuário a partir do banco
+        this.gerenciador.carregarRecursosDoUsuario(this.usuarioLogado);
+
         inicializarComponentes();
         configurarLayout();
-        carregarRecursos();  // carrega dados iniciais
+        carregarRecursos();
         adicionarListeners();
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -41,10 +39,6 @@ public class TelaListagemFatura extends JFrame {
         setLocationRelativeTo(null);
         setVisible(true);
     }
-
-    // ============================
-    // Inicialização de componentes
-    // ============================
 
     private void inicializarComponentes() {
         tableModel = new RecursoTableModel();
@@ -72,6 +66,11 @@ public class TelaListagemFatura extends JFrame {
         panelFatura.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JPanel panelBotoes = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
+        JButton btnVoltar = new JButton("Voltar ao Menu");
+        btnVoltar.addActionListener(e -> dispose());
+
+        panelBotoes.add(btnVoltar);
         panelBotoes.add(btnAdicionarHoras);
 
         panelFatura.add(lblTotalFatura, BorderLayout.WEST);
@@ -81,22 +80,17 @@ public class TelaListagemFatura extends JFrame {
         add(panelFatura, BorderLayout.SOUTH);
     }
 
-    // ============================
-    // Carregar dados e listeners
-    // ============================
-
     private void carregarRecursos() {
-        // Aqui você poderia buscar do BD via recursoDAO.listarRecursosPorUsuario(...)
-        // Por enquanto, usamos o GerenciadorRecursos + lista do usuário
         tableModel.setFaturaItens(gerenciador.gerarFatura(usuarioLogado));
         atualizarTotalFatura();
     }
 
     private void adicionarListeners() {
         btnAdicionarHoras.addActionListener(e -> {
-            // Adiciona 10 horas de uso a cada recurso do usuário
-            for (RecursoCloud recurso : usuarioLogado.getRecursos()) {
-                recurso.adicionarHorasUso(10);
+            if (usuarioLogado.getRecursos() != null) {
+                for (RecursoCloud recurso : usuarioLogado.getRecursos()) {
+                    recurso.adicionarHorasUso(10);
+                }
             }
 
             carregarRecursos();
@@ -116,9 +110,9 @@ public class TelaListagemFatura extends JFrame {
     // Modelo de tabela
     // ============================
 
-    private class RecursoTableModel extends AbstractTableModel {
+    private static class RecursoTableModel extends AbstractTableModel {
 
-        private final String[] colunas = {"ID", "Nome", "Tipo", "Horas/Mês", "Custo Mensal"};
+        private final String[] colunas = {"ID", "Tipo", "Nome", "Horas/Mês", "Custo Mensal"};
         private List<FaturaItem> faturaItens;
 
         public RecursoTableModel() {
@@ -126,7 +120,7 @@ public class TelaListagemFatura extends JFrame {
         }
 
         public void setFaturaItens(List<FaturaItem> faturaItens) {
-            this.faturaItens = faturaItens;
+            this.faturaItens = faturaItens != null ? faturaItens : new ArrayList<>();
             fireTableDataChanged();
         }
 
@@ -151,13 +145,11 @@ public class TelaListagemFatura extends JFrame {
 
             switch (columnIndex) {
                 case 0:
-                    // FaturaItem não tem ID do recurso.
-                    // Se quiser, pode mapear depois usando a posição ou alterar o modelo.
-                    return "-";
+                    return "-"; // ID do recurso não está em FaturaItem (poderia ser adicionado depois)
                 case 1:
-                    return item.getNomeRecurso();
-                case 2:
                     return item.getTipoRecurso();
+                case 2:
+                    return item.getNomeRecurso();
                 case 3:
                     return item.getHorasUso();
                 case 4:

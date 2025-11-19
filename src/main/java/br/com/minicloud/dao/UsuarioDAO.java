@@ -11,26 +11,38 @@ public class UsuarioDAO {
 
     // CREATE – inserir usuário (já com plano definido)
     public Usuario inserirUsuario(Usuario usuario) {
-        String sql = "INSERT INTO usuarios (nome, email, plano_id) VALUES (?, ?, ?) RETURNING id_usuario";
+        String sqlInsert = "INSERT INTO usuarios (nome, email, plano_id) VALUES (?, ?, ?) RETURNING id_usuario";
 
-        try (Connection conn = ConexaoBD.getConexao();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = ConexaoBD.getConexao()) {
 
-            stmt.setString(1, usuario.getNome());
-            stmt.setString(2, usuario.getEmail());
+            // 1) Garante que o usuário tenha um plano (default = FREE)
+            Plano plano = usuario.getPlano();
+            if (plano == null) {
+                plano = obterPlanoFree(conn);  // busca o plano FREE no banco
 
-            if (usuario.getPlano() == null) {
-                throw new IllegalArgumentException("O usuário precisa ter um plano definido para ser salvo.");
+                if (plano == null) {
+                    throw new SQLException("Plano FREE não encontrado na tabela PLANOS.");
+                }
+
+                // seta o plano no objeto usuário também, pra manter coerente em memória
+                usuario.setPlano(plano);
             }
-            stmt.setInt(3, usuario.getPlano().getId());
 
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    usuario.setId(rs.getInt("id_usuario"));
+            // 2) Faz o INSERT usando o plano definido (ou FREE)
+            try (PreparedStatement stmt = conn.prepareStatement(sqlInsert)) {
+                stmt.setString(1, usuario.getNome());
+                stmt.setString(2, usuario.getEmail());
+                stmt.setInt(3, plano.getId());
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        usuario.setId(rs.getInt("id_usuario"));
+                    }
                 }
             }
 
-            System.out.println("Usuário inserido com sucesso: " + usuario.getNome());
+            System.out.println("Usuário inserido com sucesso: " + usuario.getNome()
+                    + " (Plano: " + usuario.getPlano().getNome() + ")");
             return usuario;
 
         } catch (SQLException e) {
@@ -38,6 +50,34 @@ public class UsuarioDAO {
             return null;
         }
     }
+
+    /**
+     * Busca o plano FREE na tabela planos.
+     * Se não encontrar, retorna null.
+     */
+    private Plano obterPlanoFree(Connection conn) throws SQLException {
+        String sqlPlano = """
+            SELECT id_plano, nome, limite_credito, limite_recursos
+              FROM planos
+             WHERE nome = 'FREE'
+             LIMIT 1
+            """;
+
+        try (PreparedStatement stmt = conn.prepareStatement(sqlPlano);
+             ResultSet rs = stmt.executeQuery()) {
+
+            if (rs.next()) {
+                return new Plano(
+                        rs.getInt("id_plano"),
+                        rs.getString("nome"),
+                        rs.getDouble("limite_credito"),
+                        rs.getInt("limite_recursos")
+                );
+            }
+        }
+        return null;
+    }
+
 
     // READ – listar todos
     public List<Usuario> listarTodos() {
@@ -125,6 +165,50 @@ public class UsuarioDAO {
 
         } catch (SQLException e) {
             System.err.println("Erro ao buscar usuário por ID: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // READ – buscar por e-mail (para login)
+    public Usuario buscarPorEmail(String email) {
+        String sql = """
+                SELECT u.id_usuario,
+                       u.nome,
+                       u.email,
+                       u.plano_id,
+                       p.nome      AS nome_plano,
+                       p.limite_credito,
+                       p.limite_recursos
+                  FROM usuarios u
+                  JOIN planos p ON u.plano_id = p.id_plano
+                 WHERE u.email = ?
+                """;
+
+        try (Connection conn = ConexaoBD.getConexao();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, email);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    Plano plano = new Plano(
+                            rs.getInt("plano_id"),
+                            rs.getString("nome_plano"),
+                            rs.getDouble("limite_credito"),
+                            rs.getInt("limite_recursos")
+                    );
+
+                    return new Usuario(
+                            rs.getInt("id_usuario"),
+                            rs.getString("nome"),
+                            rs.getString("email"),
+                            plano
+                    );
+                }
+            }
+
+        } catch (SQLException e) {
+            System.err.println("Erro ao buscar usuário por e-mail: " + e.getMessage());
         }
         return null;
     }

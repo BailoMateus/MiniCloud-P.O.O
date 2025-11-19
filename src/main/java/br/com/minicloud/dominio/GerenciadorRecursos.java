@@ -1,52 +1,40 @@
 package br.com.minicloud.dominio;
 
+import br.com.minicloud.dao.BancoDadosGerenciadoDAO;
+import br.com.minicloud.dao.BucketStorageDAO;
+import br.com.minicloud.dao.InstanciaComputacaoDAO;
+import br.com.minicloud.dao.RecursoCloudDAO;
 import br.com.minicloud.exceptions.LimiteRecursosPlanoException;
 
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Classe de regra de negócio para criação e faturamento de recursos da MiniCloud.
+ * Agora integrada com o banco de dados via DAOs.
+ */
 public class GerenciadorRecursos {
 
-    private List<RecursoCloud> recursos;
+    private final InstanciaComputacaoDAO instanciaDAO = new InstanciaComputacaoDAO();
+    private final BancoDadosGerenciadoDAO bancoDAO = new BancoDadosGerenciadoDAO();
+    private final BucketStorageDAO bucketDAO = new BucketStorageDAO();
+    private final RecursoCloudDAO recursoDAO = new RecursoCloudDAO();
 
-    public GerenciadorRecursos() {
-        this.recursos = new ArrayList<>();
-    }
-
-    // ============================
-    // Regras de limite por plano
-    // ============================
-    private boolean podeCriarMaisRecursos(Usuario usuario) {
-        if (usuario == null || usuario.getPlano() == null) {
-            // Se não tiver plano associado, por enquanto não bloqueia
-            return true;
-        }
-
-        int recursosAtuais = usuario.getRecursos().size();
-        int limite = usuario.getPlano().getLimiteRecursos();
-
-        return recursosAtuais < limite;
-    }
-
-    // ============================
-    // Criação de recursos por usuário
-    // ============================
-
+    /**
+     * Cria uma nova Instância de Computação para o usuário.
+     * Respeita o limite de recursos do plano e persiste no BD.
+     */
     public InstanciaComputacao criarInstanciaComputacao(
             Usuario usuario,
             String nome,
             double custoBaseHora,
             int vcpus,
-            int memoriaGb) throws LimiteRecursosPlanoException {
+            int memoriaGb
+    ) throws LimiteRecursosPlanoException {
 
-        if (!podeCriarMaisRecursos(usuario)) {
-            throw new LimiteRecursosPlanoException(
-                    "Usuário '" + usuario.getNome() + "' atingiu o limite de recursos do plano: " +
-                            usuario.getPlano().getNome()
-            );
-        }
+        verificarLimiteRecursos(usuario);
 
-        InstanciaComputacao inst = new InstanciaComputacao(
+        InstanciaComputacao instancia = new InstanciaComputacao(
                 0,
                 nome,
                 custoBaseHora,
@@ -54,29 +42,30 @@ public class GerenciadorRecursos {
                 memoriaGb
         );
 
-        recursos.add(inst);
-        if (usuario != null) {
-            usuario.adicionarRecurso(inst);
-        }
-        return inst;
+        // Persiste no BD
+        instancia = instanciaDAO.inserirInstancia(usuario, instancia);
+
+        // Atualiza o modelo em memória
+        usuario.adicionarRecurso(instancia);
+
+        return instancia;
     }
 
+    /**
+     * Cria um novo Banco de Dados Gerenciado para o usuário.
+     */
     public BancoDadosGerenciado criarBancoDadosGerenciado(
             Usuario usuario,
             String nome,
             double custoBaseHora,
             int armazenamentoGb,
             boolean replicacaoAtiva,
-            double custoPorGb) throws LimiteRecursosPlanoException {
+            double custoPorGb // por enquanto não está no schema, mas mantemos no domínio
+    ) throws LimiteRecursosPlanoException {
 
-        if (!podeCriarMaisRecursos(usuario)) {
-            throw new LimiteRecursosPlanoException(
-                    "Usuário '" + usuario.getNome() + "' atingiu o limite de recursos do plano: " +
-                            usuario.getPlano().getNome()
-            );
-        }
+        verificarLimiteRecursos(usuario);
 
-        BancoDadosGerenciado db = new BancoDadosGerenciado(
+        BancoDadosGerenciado banco = new BancoDadosGerenciado(
                 0,
                 nome,
                 custoBaseHora,
@@ -85,26 +74,24 @@ public class GerenciadorRecursos {
                 custoPorGb
         );
 
-        recursos.add(db);
-        if (usuario != null) {
-            usuario.adicionarRecurso(db);
-        }
-        return db;
+        banco = bancoDAO.inserirBanco(usuario, banco);
+        usuario.adicionarRecurso(banco);
+
+        return banco;
     }
 
+    /**
+     * Cria um novo Bucket de Storage para o usuário.
+     */
     public BucketStorage criarBucketStorage(
             Usuario usuario,
             String nome,
             double custoBaseHora,
             int armazenamentoGb,
-            double custoPorGb) throws LimiteRecursosPlanoException {
+            double custoPorGb // idem, mantido no domínio
+    ) throws LimiteRecursosPlanoException {
 
-        if (!podeCriarMaisRecursos(usuario)) {
-            throw new LimiteRecursosPlanoException(
-                    "Usuário '" + usuario.getNome() + "' atingiu o limite de recursos do plano: " +
-                            usuario.getPlano().getNome()
-            );
-        }
+        verificarLimiteRecursos(usuario);
 
         BucketStorage bucket = new BucketStorage(
                 0,
@@ -114,62 +101,60 @@ public class GerenciadorRecursos {
                 custoPorGb
         );
 
-        recursos.add(bucket);
-        if (usuario != null) {
-            usuario.adicionarRecurso(bucket);
-        }
+        bucket = bucketDAO.inserirBucket(usuario, bucket);
+        usuario.adicionarRecurso(bucket);
+
         return bucket;
     }
 
-    // ============================
-    // Operações gerais
-    // ============================
-
-    public List<RecursoCloud> getRecursos() {
-        return recursos;
+    public void carregarRecursosDoUsuario(Usuario usuario) {
+        List<RecursoCloud> recursos = recursoDAO.listarTodosPorUsuario(usuario.getId());
+        usuario.setRecursos(recursos);
     }
 
-    // Custo de todos os recursos do sistema (global)
-    public double calcularCustoTotalMensal() {
-        double total = 0.0;
-        for (RecursoCloud r : recursos) {
-            total += r.calcularCustoMensal();
-        }
-        return total;
-    }
-
-    // Custo somente dos recursos de um usuário
-    public double calcularCustoTotalMensal(Usuario usuario) {
-        if (usuario == null) return 0.0;
-
-        double total = 0.0;
-        for (RecursoCloud r : usuario.getRecursos()) {
-            total += r.calcularCustoMensal();
-        }
-        return total;
-    }
-
-    // ============================
-    // Fatura por usuário
-    // ============================
-
+    /**
+     * Gera a lista de itens de fatura do usuário com base nos recursos
+     * atualmente presentes em usuario.getRecursos().
+     */
     public List<FaturaItem> gerarFatura(Usuario usuario) {
         List<FaturaItem> itens = new ArrayList<>();
-        if (usuario == null) return itens;
+
+        if (usuario.getRecursos() == null) {
+            return itens;
+        }
 
         for (RecursoCloud recurso : usuario.getRecursos()) {
-            String tipo = recurso.getClass().getSimpleName();
-            String nome = recurso.getNome();
-            int horas = recurso.getHorasUsoMes();
-            double custo = recurso.calcularCustoMensal();
 
-            FaturaItem item = new FaturaItem(tipo, nome, horas, custo);
+            double horasUso = recurso.getHorasUsoMes();
+            double custoMensal = recurso.getCustoBaseHora() * horasUso;
+
+            String tipo;
+            if (recurso instanceof InstanciaComputacao) {
+                tipo = "Instância de Computação";
+            } else if (recurso instanceof BancoDadosGerenciado) {
+                tipo = "Banco de Dados Gerenciado";
+            } else if (recurso instanceof BucketStorage) {
+                tipo = "Bucket de Storage";
+            } else {
+                tipo = "Recurso Desconhecido";
+            }
+
+            FaturaItem item = new FaturaItem(
+                    recurso.getNome(),
+                    tipo,
+                    (int)horasUso,
+                    custoMensal
+            );
+
             itens.add(item);
         }
 
         return itens;
     }
 
+    /**
+     * Calcula o valor total da fatura a partir dos FaturaItem.
+     */
     public double calcularTotalFatura(Usuario usuario) {
         double total = 0.0;
         for (FaturaItem item : gerarFatura(usuario)) {
@@ -178,35 +163,32 @@ public class GerenciadorRecursos {
         return total;
     }
 
-    // ============================
-    // Ações em massa
-    // ============================
-
-    public void ligarTodos() {
-        for (RecursoCloud r : recursos) {
-            r.ligar();
+    /**
+     * Verifica, com base no plano do usuário, se ainda é possível criar
+     * mais um recurso. Usa a quantidade de recursos persistidos no BD.
+     */
+    private void verificarLimiteRecursos(Usuario usuario) throws LimiteRecursosPlanoException {
+        Plano plano = usuario.getPlano();
+        if (plano == null) {
+            // Se não houver plano associado, você pode decidir:
+            // - permitir tudo
+            // - ou lançar exceção específica
+            return;
         }
-    }
 
-    public void desligarTodos() {
-        for (RecursoCloud r : recursos) {
-            r.desligar();
-        }
-    }
+        int limite = plano.getLimiteRecursos();
 
-    public void adicionarHorasUsoTodos(int horas) {
-        for (RecursoCloud r : recursos) {
-            r.adicionarHorasUso(horas);
-        }
-    }
+        // Conta quantos recursos existem no BD para esse usuário
+        int quantidadeAtual = recursoDAO.listarTodosPorUsuario(usuario.getId()).size();
 
-    @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder("GerenciadorRecursos{\n");
-        for (RecursoCloud r : recursos) {
-            sb.append("  ").append(r).append("\n");
+        if (quantidadeAtual >= limite) {
+            String msg = String.format(
+                    "O usuário já possui %d recursos. Limite do plano '%s' é %d.",
+                    quantidadeAtual,
+                    plano.getNome(),
+                    limite
+            );
+            throw new LimiteRecursosPlanoException(msg);
         }
-        sb.append("}");
-        return sb.toString();
     }
 }
