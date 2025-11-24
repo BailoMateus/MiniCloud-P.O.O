@@ -28,7 +28,6 @@ Para rodar o projeto localmente, é necessário ter instalado:
 | Java (JDK)  | 17 ou superior |
 | PostgreSQL  | 14 ou superior |
 | IDE         | IntelliJ, Eclipse ou NetBeans |
-| Maven       | (caso usem dependências externas) |
 
 ---
 
@@ -70,6 +69,11 @@ cd minicloud-poo
 
 
 ```
+Baixei e configure na IDE do mesmo modo que é configurado o JDK do java o driver de JDBC do postgres: https://jdbc.postgresql.org/download/
+
+Apos o Download va em File > Project Structure > Modules > Dependecies > Clicar no + e Adicionar o Driver e da Apply
+
+
 Execute os comandos abaixo em um terminal SQL do PostgreSQL (psql) usando um usuário com permissão de superusuário, como postgres.
 
 Esses comandos criam o banco, o usuário, e concedem todas as permissões necessárias para o sistema MiniCloud funcionar corretamente.
@@ -102,8 +106,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO minicloud_user;
 
 ALTER DEFAULT PRIVILEGES IN SCHEMA public
 GRANT ALL ON SEQUENCES TO minicloud_user;
-\i database/schema.sql
 
+
+
+\i database/schema.sql
 
 Para popular a tabela de planos, rode:
 
@@ -184,17 +190,9 @@ JDBC
 
 Swing / JavaFX
 
-Maven (opcional)
-
 Git / Trello / GitHub
 
-🧾 Licença
 
-Projeto acadêmico desenvolvido para fins educacionais.
-Universidade: PUCPR
-Disciplina: Programação Orientada a Objetos
-Autores: [seus nomes e RA]
-Ano: 2025
 
 
 
